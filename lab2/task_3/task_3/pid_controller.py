@@ -5,7 +5,7 @@ from geometry_msgs.msg import Twist
 
 class PIDController(Node):
     def __init__(self):
-        super().__init__('pid_controller')
+        super().__init__('pid_speed_controller')
         self.subscription = self.create_subscription(
             LaserScan,'/scan',self.listener_callback,10
         )
