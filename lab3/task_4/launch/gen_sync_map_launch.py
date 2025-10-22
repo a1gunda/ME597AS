@@ -5,25 +5,31 @@ from ament_index_python.packages import get_package_share_directory
 import os
 
 def generate_launch_description():
-    # --- Get package directories ---
+    # Get package directories
     turtlebot4_nav_dir = get_package_share_directory('turtlebot4_navigation')
     turtlebot4_viz_dir = get_package_share_directory('turtlebot4_viz')
 
-    # --- Full paths to the target launch files ---
+    # Full paths to the target launch files
     slam_launch_file = os.path.join(turtlebot4_nav_dir, 'launch', 'slam.launch.py')
     view_robot_launch_file = os.path.join(turtlebot4_viz_dir, 'launch', 'view_robot.launch.py')
 
-    # --- Include the SLAM launch file ---
+    # Include the SLAM launch file
     slam_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(slam_launch_file)
+        PythonLaunchDescriptionSource(slam_launch_file),
+        launch_arguments={
+            'namespace': '/robot'  # namespace
+        }.items()
     )
 
-    # --- Include the RViz visualization launch file ---
+    # Include the RViz visualization launch file
     view_robot_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(view_robot_launch_file)
+        PythonLaunchDescriptionSource(view_robot_launch_file),
+        launch_arguments={
+            'namespace': '/robot'  # namespace
+        }.items()
     )
 
-    # --- Combine into one LaunchDescription ---
+    # Combine into one LaunchDescription
     return LaunchDescription([
         slam_launch,
         view_robot_launch

@@ -10,6 +10,7 @@ from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped, Pose, Twist
 from std_msgs.msg import Float32
 
+from navigation_astar_f24 import *
 
 class Navigation(Node):
     """! Navigation node class.
@@ -41,6 +42,17 @@ class Navigation(Node):
         # Node rate
         self.rate = self.create_rate(10)
 
+        # Map generation
+        self.mp = MapProcessor('sync_classroom_map')
+        kr = self.mp.rect_kernel(5,1)
+        self.mp.inflate_map(kr,True)
+        self.mp.get_graph_from_map()
+        # plot
+        fig, ax = plt.subplots(dpi=100)
+        plt.imshow(self.mp.inf_map_img_array)
+        plt.colorbar()
+        plt.show()
+
     def __goal_pose_cbk(self, data):
         """! Callback to catch the goal pose.
         @param  data    PoseStamped object from RVIZ.
@@ -60,7 +72,7 @@ class Navigation(Node):
             'ttbot_pose: {:.4f}, {:.4f}'.format(self.ttbot_pose.pose.position.x, self.ttbot_pose.pose.position.y))
 
     def a_star_path_planner(self, start_pose, end_pose):
-        """! A Start path planner.
+        """! A Star path planner.
         @param  start_pose    PoseStamped object containing the start of the path to be created.
         @param  end_pose      PoseStamped object containing the end of the path to be created.
         @return path          Path object containing the sequence of waypoints of the created path.
@@ -69,8 +81,33 @@ class Navigation(Node):
         self.get_logger().info(
             'A* planner.\n> start: {},\n> end: {}'.format(start_pose.pose.position, end_pose.pose.position))
         self.start_time = self.get_clock().now().nanoseconds*1e-9 #Do not edit this line (required for autograder)
-        # TODO: IMPLEMENTATION OF THE A* ALGORITHM
+        
+        mp.map_graph.root = f"{start_pose.pose.position.y},{start_pose.pose.position.x}"
+        mp.map_graph.end = f"{end_pose.pose.position.y},{end_pose.pose.position.x}"
+
+        as_maze = AStar(mp.map_graph)
+        start = time.time()
+        as_maze.solve(mp.map_graph.g[mp.map_graph.root],mp.map_graph.g[mp.map_graph.end])
+        end = time.time()
+        print('Elapsed Time: %.3f'%(end - start))
+        
+        path_as,dist_as = as_maze.reconstruct_path(mp.map_graph.g[mp.map_graph.root],mp.map_graph.g[mp.map_graph.end])
+        path_arr_as = mp.draw_path(path_as)
+
+        fig, ax = plt.subplots(nrows = 1, ncols = 1, dpi=300, sharex=True, sharey=True)
+        ax[0].imshow(path_arr_as)
+        ax[0].set_title('Path A*')
+        plt.show()
+        print(dist_as)
+
         path.poses.append(start_pose)
+        for pose in path_as:
+            temp = PoseStamped()
+            y,x = map(int,pose.split(","))
+            temp.pose.position.x = x
+            temp.pose.position.y = y
+
+            path.poses.append(temp)
         path.poses.append(end_pose)
         # Do not edit below (required for autograder)
         self.astarTime = Float32()
@@ -81,12 +118,32 @@ class Navigation(Node):
 
     def get_path_idx(self, path, vehicle_pose):
         """! Path follower.
-        @param  path                  Path object containing the sequence of waypoints of the created path.
-        @param  current_goal_pose     PoseStamped object containing the current vehicle position.
-        @return idx                   Position in the path pointing to the next goal pose to follow.
+        @param  path            Path object containing the sequence of waypoints of the created path.
+        @param  vehicle_pose    PoseStamped object containing the current vehicle position.
+        @return idx             Position in the path pointing to the next goal pose to follow.
         """
         idx = 0
-        # TODO: IMPLEMENT A MECHANISM TO DECIDE WHICH POINT IN THE PATH TO FOLLOW idx <= len(path)
+        min_dist = float('inf')
+        vx = vehicle_pose.pose.position.x
+        vy = vehicle_pose.pose.position.y
+        vhead = self.get_heading(vehicle_pose.pose.orientation)
+
+        for i,pose in enumerate(path.poses):
+            # extract coordinates
+            x = pose.pose.position.x
+            y = pose.pose.position.y
+
+            # distance and heading
+            dist = np.sqrt((x - vx)**2 + (y - vy)**2)
+            head = np.atan2(y - vy, x - vx)
+            head_err = head - vhead
+
+            # only check ahead
+            if abs(head_err) < (np.pi/2):
+                if dist < min_dist:
+                    min_dist = dist
+                    idx = i
+        
         return idx
 
     def path_follower(self, vehicle_pose, current_goal_pose):
@@ -133,6 +190,16 @@ class Navigation(Node):
 
             self.rate.sleep()
             # Sleep for the rate to control loop timing
+
+    def get_heading(self, quat):
+        """! Converts the quaternion of the robot to the heading.
+        @param quat         orientation quaternion
+        @return heading     heading angle
+        """
+        sin = 2.0 * (quat.w * quat.z + quat.x * quat.y)
+        cos = 1.0 - 2.0 * (quat.y ** 2 + quat.z ** 2)
+
+        return np.atan2(sin, cos)
 
 
 def main(args=None):
