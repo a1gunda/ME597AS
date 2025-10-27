@@ -327,7 +327,7 @@ class Navigation(Node):
 
         # Map generation
         mp = MapProcessor('sync_classroom_map')
-        kr = mp.rect_kernel(15,15)
+        kr = mp.rect_kernel(12,1)
         mp.inflate_map(kr,True)
         mp.get_graph_from_map()
         self.res = mp.map.map_df['resolution'][0]
@@ -413,7 +413,7 @@ class Navigation(Node):
         @return idx                   Position in the path pointing to the next goal pose to follow.
         """
         # constant
-        ADVANCE_DIST_THRESHOLD = 0.1    # [m] distance within which to consider a waypoint "reached"
+        ADVANCE_DIST_THRESHOLD = 0.2    # [m] distance within which to consider a waypoint "reached"
 
         # empty path
         n = len(path.poses)
@@ -442,12 +442,12 @@ class Navigation(Node):
         @return path                   Path object containing the sequence of waypoints of the created path.
         """
         # constants
-        MAX_LIN_SPEED = 0.7             # [m/s] maximum forward speed
-        MAX_ANG_SPEED = 0.3             # [rad/s] maximum angular speed
-        THRESHOLD = 0.4                 # [rad] threshold to rotate in place
-        ANG_GAIN = 0.7                  # proportional gain for angular correction
-        SCALE_DIST = 0.8                # distance for full linear speed scaling
-        STOP_DIST = 0.1                 # [m] stop threshold near final goal
+        MAX_LIN_SPEED = 0.6             # [m/s] maximum forward speed
+        MAX_ANG_SPEED = 0.4             # [rad/s] maximum angular speed
+        THRESHOLD = 0.2                 # [rad] threshold to rotate in place
+        ANG_GAIN = 1.2                  # proportional gain for angular correction
+        SCALE_DIST = 1.8                # distance for full linear speed scaling
+        STOP_DIST = 0.2                 # [m] stop threshold near final goal
 
         # extract positions
         vx, vy = vehicle_pose.pose.position.x, vehicle_pose.pose.position.y
@@ -465,19 +465,21 @@ class Navigation(Node):
         if abs(err_head) > THRESHOLD:
             speed = 0.0
             heading = np.clip(ANG_GAIN * err_head, -MAX_ANG_SPEED, MAX_ANG_SPEED)
-            self.get_logger().info(f"HEADING ERROR: {err_head:.4f}")
-        else:
-            # linear velocity scaling
-            scale_heading = max(0.0, 0.5 + 0.5 * np.cos(err_head))
-            scale_dist = min(1.0, err_dist / max(SCALE_DIST, 1e-6))
-            speed = MAX_LIN_SPEED * scale_heading * scale_dist
-            heading = 0.0
+            
+            return speed, heading
+
+        # linear velocity scaling
+        scale_heading = max(0.0, 0.5 + 0.5 * np.cos(err_head))
+        scale_dist = min(1.0, err_dist / max(SCALE_DIST, 1e-6))
+        speed = MAX_LIN_SPEED * scale_heading * scale_dist
+        heading = 0.0
 
         # stop when near final global goal
         if self.path and self.follow_idx >= len(self.path.poses) - 2:
             final_p = self.path.poses[-1].pose.position
             final_dist = np.hypot(final_p.x - vx, final_p.y - vy)
             if final_dist < STOP_DIST:
+                self.follow_idx = len(self.path.poses)
                 return 0.0, 0.0
 
         return speed, heading
@@ -503,26 +505,23 @@ class Navigation(Node):
             rclpy.spin_once(self)
 
             # 1: wait for valid goal pose
-            if self.goal_pose is None:
+            if not self.goal_pose_given:
                 self.get_logger().info("Waiting for goal pose to be received...")
-                continue
-
-            # ensure goal pose is valid (not default/zeroed)
-            if (self.goal_pose.pose.position.x == 0.0 and 
-                self.goal_pose.pose.position.y == 0.0):
-                self.get_logger().info('Waiting for valid goal pose...')
                 continue
 
             # 2: wait for valid current pose
             if not self.ttbot_pose_given:
                 continue
 
+            # ensure goal pose is valid (not starting pose)
+            if (self.goal_pose.pose.position.x == self.ttbot_pose.pose.position.x and 
+                self.goal_pose.pose.position.y == self.ttbot_pose.pose.position.y):
+                self.get_logger().warn('Invalid goal pose.')
+                self.goal_pose_given = False
+                continue
+
             # reset flag to prevent repeated processing of the same pose
             self.ttbot_pose_given = False
-
-            # log received goal pose
-            gx, gy = self.goal_pose.pose.position.x, self.goal_pose.pose.position.y
-            self.get_logger().info(f'Goal pose received: ({gx:.4f}, {gy:.4f})')
 
             # 3: generate path if not yet created
             if self.path is None:
@@ -542,16 +541,16 @@ class Navigation(Node):
             idx = self.get_path_idx(path, self.ttbot_pose)
             self.get_logger().info(f'Current path index: {idx}')
 
-            # 5: check if goal reached
+            # 5: compute control commands and move the robot
+            current_goal = path.poses[idx]
+            speed, heading = self.path_follower(self.ttbot_pose, current_goal)
+            self.move_ttbot(speed, heading)
+
+            # 6: check if goal reached
             if idx >= len(path.poses):
                 self.get_logger().info('Goal Pose Reached!')
                 self.move_ttbot(0.0, 0.0)
                 continue
-
-            # 6: compute control commands and move the robot
-            current_goal = path.poses[idx]
-            speed, heading = self.path_follower(self.ttbot_pose, current_goal)
-            self.move_ttbot(speed, heading)
 
             self.rate.sleep()
 
