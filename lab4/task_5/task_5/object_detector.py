@@ -23,6 +23,10 @@ class ObjectDetector(Node):
         # initialize image converter
         self.bridge = CvBridge()
 
+        # resize window to full screen
+        cv2.namedWindow('task_5', cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty('task_5', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
     def detect_image(self, ros2_img):
         # convert to opencv image
         cv2_img = self.bridge.imgmsg_to_cv2(ros2_img)
@@ -47,8 +51,8 @@ class ObjectDetector(Node):
             mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
         if not contours:
-            self.get_logger().info("No red shapes detected...")
-            cv2.imshow('lab3_video', cv2_img)
+            self.get_logger().info('No red shapes detected...')
+            cv2.imshow('task_5', cv2_img)
             cv2.waitKey(1)
             return
 
@@ -67,8 +71,8 @@ class ObjectDetector(Node):
 
         # detect nothing if no triangles
         if not triangle_contours:
-            self.get_logger().info("No triangle found...")
-            cv2.imshow('lab3_video', cv2_img)
+            self.get_logger().info('No triangle found...')
+            cv2.imshow('task_5', cv2_img)
             cv2.waitKey(1)
             return
 
@@ -88,18 +92,18 @@ class ObjectDetector(Node):
         bbox.size_y = float(h)
 
         self.publisher_.publish(bbox)
-        self.get_logger().info("Publishing bounding box...")
+        self.get_logger().info('Publishing bounding box...')
 
         # visualization
         # cv2.drawContours(cv2_img, [approx_poly], -1, (0,255,0), 3)
         cv2.rectangle(cv2_img, (x,y), (x+w, y+h), (255,0,0), 2)
-        cv2.imshow('lab3_video', cv2_img)
+        cv2.imshow('task_5', cv2_img)
         cv2.waitKey(1)
 
 
 def imshow(self, log, cv2_img):
     self.get_logger().info(log)
-    cv2.imshow('lab3_video', cv2_img)
+    cv2.imshow('task_5', cv2_img)
     cv2.waitKey(1)
 
 
@@ -113,7 +117,7 @@ def main(args=None):
     # release image pointer
     object_detector.cap.release()
 
-    # Destroy the node explicitly
+    # destroy the node explicitly
     object_detector.destroy_node()
     rclpy.shutdown()
 
