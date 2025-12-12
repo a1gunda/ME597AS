@@ -15,7 +15,6 @@ from geometry_msgs.msg import Quaternion, PoseStamped, Twist
 from nav_msgs.msg import OccupancyGrid, Path, Odometry
 from visualization_msgs.msg import Marker, MarkerArray
 
-
 # ==============================================================
 #  A* SUPPORT CLASSES (Tree, TreeNode, AStar)
 # ==============================================================
@@ -35,7 +34,6 @@ class TreeNode():
         self.children.extend(node_list)
         self.weight.extend(w)
 
-
 class Tree():
     def __init__(self, name):
         self.name = name
@@ -49,7 +47,6 @@ class Tree():
             self.root = node.name
         elif end:
             self.end = node.name
-
 
 class AStar():
     def __init__(self, in_tree: Tree):
@@ -115,7 +112,6 @@ class AStar():
         path.reverse()
         return path, self.dist[end_key]
 
-
 # ==============================================================
 #  HELPER FUNCTIONS (map/world conversions + inflation)
 # ==============================================================
@@ -145,7 +141,6 @@ def world2map(occupancy_grid: OccupancyGrid, xy_tup):
     else:
         return None
 
-
 def map2world(occupancy_grid: OccupancyGrid, ij_tup):
     """
     grid (i,j) -> world (x,y) cell center
@@ -161,7 +156,6 @@ def map2world(occupancy_grid: OccupancyGrid, ij_tup):
     x = origin_x + (i + 0.5) * res
     y = origin_y + (j + 0.5) * res
     return (x, y)
-
 
 def inflate_obstacles(map_array: np.ndarray, k: int):
     """
@@ -188,7 +182,6 @@ def inflate_obstacles(map_array: np.ndarray, k: int):
         region[region < 100] += 50
 
     return inflated_map
-
 
 # ==============================================================
 #  MAIN TASK1 NODE
@@ -338,11 +331,9 @@ class Task1Node(Node):
     #  Utility: heading + angle normalization
     # ----------------------------------------------------------
 
-    @staticmethod
     def normalize(a):
         return (a + np.pi) % (2.0 * np.pi) - np.pi
 
-    @staticmethod
     def calc_heading(q):
         """
         Quaternion -> yaw
@@ -876,7 +867,6 @@ class Task1Node(Node):
 
         self.get_logger().info("Map saved.")
 
-
 # ==============================================================
 #  MAIN
 # ==============================================================
@@ -893,7 +883,6 @@ def main(args=None):
         node.stop_robot()
         node.destroy_node()
         rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
