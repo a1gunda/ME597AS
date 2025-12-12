@@ -187,7 +187,7 @@ def inflate_obstacles(map_array: np.ndarray, k: int):
 #  MAIN TASK1 NODE
 # ==============================================================
 
-class Task1Node(Node):
+class Task1(Node):
     """
     Frontier-based autonomous mapping for TurtleBot3.
     - Uses live SLAM map on /map
@@ -873,7 +873,7 @@ class Task1Node(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Task1Node()
+    node = Task1()
 
     try:
         rclpy.spin(node)

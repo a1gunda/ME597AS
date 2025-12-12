@@ -651,16 +651,16 @@ class Task2(Node):
         """
 
         # constants (tunable)
-        MAX_LIN = 0.45
-        MAX_ANG = 1.2
+        MAX_LIN = 0.55
+        MAX_ANG = 1.5
 
-        KP_ANG = 2.0
+        KP_ANG = 3.0
         KI_ANG = 0.05
-        KD_ANG = 0.25
+        KD_ANG = 0.50
 
-        FWD_ERR = 0.4
-        ROTATE_ERR = 1.2
-        SLOW_RADIUS = 0.8
+        FWD_ERR = 0.3
+        ROTATE_ERR = 1.0
+        SLOW_RADIUS = 0.6
         STOP_RADIUS = 0.12
 
         INT_LIM = 0.5
@@ -730,6 +730,92 @@ class Task2(Node):
                 return 0.0, 0.0
 
         return v, w
+
+    # def path_follower(self, vehicle_pose, current_goal_pose):
+    #     """
+    #     pid-based differential-drive path follower
+    #     """
+
+    #     # constants (tunable)
+    #     MAX_LIN = 0.45
+    #     MAX_ANG = 1.2
+
+    #     KP_ANG = 2.0
+    #     KI_ANG = 0.05
+    #     KD_ANG = 0.25
+
+    #     FWD_ERR = 0.4
+    #     ROTATE_ERR = 1.2
+    #     SLOW_RADIUS = 0.8
+    #     STOP_RADIUS = 0.12
+
+    #     INT_LIM = 0.5
+
+    #     # timing
+    #     t = self.get_clock().now().nanoseconds * 1e-9
+    #     dt = max(t - self.last_time, 1e-3)
+    #     self.last_time = t
+
+    #     # extract positions
+    #     rx = vehicle_pose.pose.position.x
+    #     ry = vehicle_pose.pose.position.y
+    #     gx = current_goal_pose.pose.position.x
+    #     gy = current_goal_pose.pose.position.y
+
+    #     # heading + distance
+    #     yaw = self.calc_heading(vehicle_pose.pose.orientation)
+    #     desired = math.atan2(gy - ry, gx - rx)
+    #     err = (desired - yaw + math.pi) % (2.0 * math.pi) - math.pi
+
+    #     dist = math.hypot(gx - rx, gy - ry)
+
+    #     # narrow passage check
+    #     narrow = False
+    #     if self.map_ready:
+    #         ix, iy = self.convert_coordinates(rx, ry, grid=True)
+    #         prox = self._proximity_inflated(ix, iy, self.clearance_radius_cells)
+    #         narrow = prox > self.narrow_proximity_thresh
+
+    #     # angular pid
+    #     self.PID_ang_int += err * dt
+    #     self.PID_ang_int = max(-INT_LIM, min(INT_LIM, self.PID_ang_int))
+
+    #     derr = (err - self.PID_ang_prev) / dt
+    #     self.PID_ang_prev = err
+
+    #     w = (
+    #         KP_ANG * err
+    #         + KI_ANG * self.PID_ang_int
+    #         + KD_ANG * derr
+    #     )
+
+    #     w = max(-MAX_ANG, min(MAX_ANG, w))
+
+    #     # rotate-in-place if badly misaligned
+    #     if abs(err) > ROTATE_ERR:
+    #         return 0.0, w
+
+    #     # linear speed gating
+    #     heading_scale = max(0.0, 1.0 - abs(err) / ROTATE_ERR)
+    #     dist_scale = min(1.0, dist / max(SLOW_RADIUS, 1e-6))
+
+    #     v = MAX_LIN * heading_scale * dist_scale
+
+    #     if narrow:
+    #         v = min(v, self.narrow_lin)
+
+    #     # move-forward if not too misaligned
+    #     if abs(err) < FWD_ERR:
+    #         return v, 0.0
+
+    #     # stop near final goal
+    #     if self.path.poses and self.follow_idx >= len(self.path.poses) - 2:
+    #         fp = self.path.poses[-1].pose.position
+    #         if math.hypot(fp.x - rx, fp.y - ry) < STOP_RADIUS:
+    #             self.PID_ang_int = 0.0
+    #             return 0.0, 0.0
+
+    #     return v, w
 
     # ------------------------------------------------------------------
     # main loop + helpers
@@ -846,7 +932,7 @@ class Task2(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    nav = Task2(node_name='task2_node')
+    nav = Task2()
 
     try:
         nav.run()
