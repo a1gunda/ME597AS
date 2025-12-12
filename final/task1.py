@@ -334,7 +334,7 @@ class Task1(Node):
     def normalize(a):
         return (a + np.pi) % (2.0 * np.pi) - np.pi
 
-    def calc_heading(q):
+    def calc_heading(self, q):
         """
         Quaternion -> yaw
         """

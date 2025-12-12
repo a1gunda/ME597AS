@@ -393,18 +393,18 @@ class Task3(Node):
         # IMPORTANT: Adjust these coordinates based on the actual map limits 
         # and known open areas to ensure thorough coverage.
         self.exploration_waypoints = [
+            # Waypoint 4: Top-right room
+            (7.98874, -5.48031),
+            # Waypoint 4: Top-left area
+            (8.5962, 2.8861),
+            # Waypoint 4: Mid-left room
+            (3.12934, 0.923115),
             # Waypoint 1: Mid-left area
             (0.7810, 2.6347),
             # Waypoint 2: Bottom-left area
             (-4.0107, 3.0100),
             # Waypoint 3: Bottom-right room
             (-4.1421, -3.7268),
-            # Waypoint 4: Top-right room
-            (-2.0280, 1.0116),
-            # Waypoint 4: Top-left area
-            (8.5962, 2.8861),
-            # Waypoint 4: Mid-left room
-            (3.12934, 0.923115),
         ]
         self.current_wp_idx = 0
         self.initial_search_complete = False # Flag to stop searching when all WPs are reached
