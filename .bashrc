@@ -121,7 +121,7 @@ for i in {1..6}; do
 done
 
 alias cbfp="cd \$HOME/Documents/sim_ws_Fall2025 && colcon build --symlink-install --packages-select turtlebot3_gazebo && source \$HOME/Documents/sim_ws_Fall2025/install/local_setup.sh && cd"
-
+alias cdmap="cd \$HOME/Documents/sim_ws_Fall2025/src/turtlebot3_gazebo/maps"
 alias task1="cbfp && ros2 launch turtlebot3_gazebo mapper.launch.py"
 alias task2="cbfp && ros2 launch turtlebot3_gazebo navigator.launch.py static_obstacles:=true"
 alias task2b="cbfp && ros2 launch turtlebot3_gazebo navigator.launch.py static_obstacles:=true bonus:=true"

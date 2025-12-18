@@ -16,7 +16,7 @@ class Task3(Node):
     """
     def __init__(self):
         super().__init__('task3_node')
-        # self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # ros interface
         self.sub_scan = self.create_subscription(LaserScan, '/scan', self.__scan_cbk, 10)
@@ -195,8 +195,8 @@ class Task3(Node):
 
         w = np.clip(w, -self.w_nom, self.w_nom)
 
-        cmd.linear.x = 0.9 * self.v_nom
-        cmd.angular.z = 1.9 * w
+        cmd.linear.x = self.v_nom
+        cmd.angular.z = 2.0 * w
 
     def state_track(self, cmd):
         self.get_logger().debug('TRACK mode active')
@@ -385,7 +385,7 @@ class Task3(Node):
             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2
         )
 
-        cv2.imshow('task3_detection', img)
+        # cv2.imshow('task3_detection', img)
         cv2.waitKey(1)
 
     ## localization + publishing
