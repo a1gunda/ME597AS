@@ -16,7 +16,7 @@ class Task3(Node):
     """
     def __init__(self):
         super().__init__('task3_node')
-        self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
+        # self.get_logger().set_level(rclpy.logging.LoggingSeverity.DEBUG)
 
         # ros interface
         self.sub_scan = self.create_subscription(LaserScan, '/scan', self.__scan_cbk, 10)
@@ -77,7 +77,7 @@ class Task3(Node):
         self.target = None                # {'color': str, 'area': float, 'cx': float, 'w': int, 'stamp': float}
         self.target_hold = 0              # small stability counter
 
-        self.get_logger().info('Task 3 running (wall-follow + vision interrupt)')
+        # self.get_logger().info('Task 3 running (wall-follow + vision interrupt)')
 
     ## callbacks
     def __scan_cbk(self, msg):
@@ -88,8 +88,11 @@ class Task3(Node):
         self.yaw = self.calc_heading(self.pose.orientation)
 
     def __img_cbk(self, msg):
+        if self.state != 'FOLLOW' or self.finished:
+            return
+
         if all(self.done.values()):
-            self.get_logger().info('All balls localized — stop')
+            # self.get_logger().info('All balls localized — stop')
             self.finished = True
             return
 
@@ -115,9 +118,9 @@ class Task3(Node):
             self.target_hold = 0
 
         self.target = det
-        self.get_logger().debug(
-            f'Vision: candidate {det["color"]}, area={det["area"]:.0f}'
-        )
+        # self.get_logger().debug(
+        #     f'Vision: candidate {det["color"]}, area={det["area"]:.0f}'
+        # )
 
     ## main loop
     def loop(self):
@@ -127,14 +130,14 @@ class Task3(Node):
         # stop robot once all balls found
         if self.finished:
             self.pub_cmd.publish(Twist())
-            cv2.destroyAllWindows()
-            cv2.waitKey(1)
+            # cv2.destroyAllWindows()
+            # cv2.waitKey(1)
 
         cmd = Twist()
 
         # vision interrupt (only when not cooling down)
         if self.state == 'FOLLOW' and self.should_track_ball():
-            self.get_logger().info('Ball detected — switching to TRACK mode')
+            # self.get_logger().info('Ball detected — switching to TRACK mode')
             self.state = 'TRACK'
 
         if self.state == 'TRACK':
@@ -152,20 +155,20 @@ class Task3(Node):
 
     ## wall following
     def state_forward(self, g, cmd):
-        self.get_logger().debug('Wall following: FORWARD')
+        # self.get_logger().debug('Wall following: FORWARD')
 
         if g['df'] < self.front_safe:
-            self.get_logger().info('Front wall detected — switching to ALIGN')
+            # self.get_logger().info('Front wall detected — switching to ALIGN')
             self.state = 'ALIGN'
             self.state_align(g, cmd)
             return
         cmd.linear.x = 1.05 * self.v_nom
 
     def state_align(self, g, cmd):
-        self.get_logger().debug('Wall following: ALIGN')
+        # self.get_logger().debug('Wall following: ALIGN')
         
         if g['df'] > self.front_safe + 0.1:
-            self.get_logger().info('Alignment complete — switching to FOLLOW')
+            # self.get_logger().info('Alignment complete — switching to FOLLOW')
             self.err_prev = 0.0
             self.state = 'FOLLOW'
             self.state_follow(g, cmd)
@@ -173,10 +176,10 @@ class Task3(Node):
         cmd.angular.z = 0.9 * self.w_nom
 
     def state_follow(self, g, cmd):
-        self.get_logger().debug('Wall following: FOLLOW')
-        self.get_logger().debug(
-            f'FOLLOW geom: df={g["df"]:.2f}, dr={g["dr"]:.2f}'
-        )
+        # self.get_logger().debug('Wall following: FOLLOW')
+        # self.get_logger().debug(
+        #     f'FOLLOW geom: df={g["df"]:.2f}, dr={g["dr"]:.2f}'
+        # )
         front_thresh = self.front_door if g['dr'] > 0.75 else self.front_safe
 
         if g['df'] < front_thresh:
@@ -199,7 +202,7 @@ class Task3(Node):
         cmd.angular.z = 2.0 * w
 
     def state_track(self, cmd):
-        self.get_logger().debug('TRACK mode active')
+        # self.get_logger().debug('TRACK mode active')
 
         # safe default: no forward motion while tracking
         cmd.linear.x = 0.0
@@ -212,9 +215,9 @@ class Task3(Node):
 
         # basic gating: don't waste time on tiny detections
         if self.target['area'] < self.min_area_localize:
-            self.get_logger().debug(
-                f'Vision: {self.target["color"]} too small (area={self.target["area"]:.0f}), ignoring'
-            )
+            # self.get_logger().debug(
+            #     f'Vision: {self.target["color"]} too small (area={self.target["area"]:.0f}), ignoring'
+            # )
             self.state = 'FOLLOW'
             cmd.angular.z = 0.0
             return
@@ -232,9 +235,9 @@ class Task3(Node):
         fx = 0.5 * float(self.target['w'])
         cntr_err = fx - float(self.target['cx'])
         w = np.clip(self.center_kp * cntr_err, -self.center_wmax, self.center_wmax)
-        self.get_logger().debug(
-            f'TRACK centering: color={self.target["color"]}, px_err={cntr_err:.1f}'
-        )
+        # self.get_logger().debug(
+        #     f'TRACK centering: color={self.target["color"]}, px_err={cntr_err:.1f}'
+        # )
         cmd.angular.z = float(w)
 
         # once centered, estimate and publish
@@ -244,9 +247,9 @@ class Task3(Node):
                 cmd.angular.z = 0.0
                 return
 
-            self.get_logger().info(
-                f'Localizing {self.target["color"]} ball (area={self.target["area"]:.0f})'
-            )
+            # self.get_logger().info(
+            #     f'Localizing {self.target["color"]} ball (area={self.target["area"]:.0f})'
+            # )
             p = self.estimate_ball_point(self.target['cx'], self.target['w'], self.target['area'])
             if p is not None:
                 self.publish_ball(self.target['color'], p)
@@ -257,15 +260,15 @@ class Task3(Node):
                 cmd.linear.x = 0.0
                 cmd.angular.z = 0.0
 
-                try:
-                    cv2.destroyWindow('task3_detection')
-                    cv2.waitKey(1)
-                except cv2.error:
-                    pass
+                # try:
+                #     cv2.destroyWindow('task3_detection')
+                #     cv2.waitKey(1)
+                # except cv2.error:
+                #     pass
 
             self.target = None
             self.target_hold = 0
-            self.get_logger().info('Returning to wall following')
+            # self.get_logger().info('Returning to wall following')
             self.state = 'FOLLOW'
             cmd.angular.z = 0.0
 
@@ -386,7 +389,7 @@ class Task3(Node):
         )
 
         # cv2.imshow('task3_detection', img)
-        cv2.waitKey(1)
+        # cv2.waitKey(1)
 
     ## localization + publishing
     def should_track_ball(self):
@@ -466,8 +469,8 @@ def main(args=None):
         # stop robot cleanly on shutdown
         task3.pub_cmd.publish(Twist())
         task3.destroy_node()
-        cv2.destroyAllWindows()
-        cv2.waitKey(1)
+        # cv2.destroyAllWindows()
+        # cv2.waitKey(1)
         rclpy.shutdown()
 
 if __name__ == '__main__':
